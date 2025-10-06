@@ -77,6 +77,10 @@ st.markdown("""
         max-height: 700px;
         overflow-y: auto;
         box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        color: #000000;
+    }
+    .html-preview * {
+        color: inherit;
     }
     .email-card {
         background: white;
@@ -86,10 +90,14 @@ st.markdown("""
         margin-bottom: 1rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         transition: all 0.3s ease;
+        color: #000000;
     }
     .email-card:hover {
         box-shadow: 0 6px 16px rgba(0,0,0,0.12);
         transform: translateX(5px);
+    }
+    .email-card h3, .email-card p {
+        color: #000000;
     }
     .status-badge {
         display: inline-block;
@@ -151,6 +159,10 @@ st.markdown("""
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         margin-bottom: 1.5rem;
+        color: #000000;
+    }
+    .stats-container * {
+        color: #000000;
     }
     .preview-toolbar {
         background: #f8f9fa;
@@ -172,11 +184,22 @@ st.markdown("""
     }
     .tab-content {
         padding: 2rem 0;
+        color: #000000;
+    }
+    .tab-content h1, .tab-content h2, .tab-content h3, 
+    .tab-content h4, .tab-content h5, .tab-content h6,
+    .tab-content p, .tab-content span, .tab-content div,
+    .tab-content li, .tab-content label {
+        color: #000000;
     }
     div[data-testid="stExpander"] {
         background: white;
         border-radius: 10px;
         border: 1px solid #e0e0e0;
+        color: #000000;
+    }
+    div[data-testid="stExpander"] * {
+        color: #000000;
     }
     .footer {
         text-align: center;
