@@ -1035,7 +1035,7 @@ with tab1:
                     
                     components.html(
                         full_preview_html,
-                        height=800,
+                        height=1200,
                         scrolling=True
                     )
                 
@@ -1109,14 +1109,14 @@ with tab2:
         
         preview_html = create_email_html_template(
             template['content'],
-            st.session_state.get('header_img', DEFAULT_HEADER_IMAGE), # Use current header_img from sidebar
-            st.session_state.get('footer_img', DEFAULT_FOOTER_IMAGE)  # Use current footer_img from sidebar
+            st.session_state.get('header_img', DEFAULT_HEADER_IMAGE),
+            st.session_state.get('footer_img', DEFAULT_FOOTER_IMAGE)
         )
         
         preview_tab1, preview_tab2 = st.tabs(["Rendered", "HTML Code"])
         
         with preview_tab1:
-            components.html(preview_html, height=800, scrolling=True)
+            components.html(preview_html, height=1200, scrolling=True)
         
         with preview_tab2:
             st.code(preview_html, language='html', line_numbers=True)
