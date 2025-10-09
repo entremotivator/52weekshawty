@@ -739,29 +739,33 @@ with st.sidebar:
                             else:
                                 delay = (email_number - 1) * 7  # Weekly for 52-email sequences
                             
-                            # Wrap HTML with header and footer if not already wrapped
-                            if '<html' not in complete_html.lower():
+                            if '<!DOCTYPE html>' in complete_html or '<html' in complete_html.lower():
+                                # It's already a complete HTML document, use as-is
+                                email_body = complete_html
+                                
+                                # Update header image if it exists in the HTML
+                                if 'header-image' in email_body:
+                                    email_body = re.sub(
+                                        r'(<div class="header-image">.*?<img src=")[^"]*(")',
+                                        f'\\1{header_img}\\2',
+                                        email_body,
+                                        flags=re.DOTALL
+                                    )
+                                
+                                # Update footer image if it exists in the HTML
+                                if 'footer-image' in email_body:
+                                    email_body = re.sub(
+                                        r'(<div class="footer-image">.*?<img src=")[^"]*(")',
+                                        f'\\1{footer_img}\\2',
+                                        email_body,
+                                        flags=re.DOTALL
+                                    )
+                            else:
+                                # It's just content, wrap it with template
                                 email_body = create_email_html_template(
                                     complete_html,
                                     header_img,
                                     footer_img
-                                )
-                            else:
-                                # Replace header and footer images in existing HTML
-                                email_body = complete_html
-                                # Update header image
-                                email_body = re.sub(
-                                    r'(<div class="header-image">.*?<img src=")[^"]*(")',
-                                    f'\\1{header_img}\\2',
-                                    email_body,
-                                    flags=re.DOTALL
-                                )
-                                # Update footer image
-                                email_body = re.sub(
-                                    r'(<div class="footer-image">.*?<img src=")[^"]*(")',
-                                    f'\\1{footer_img}\\2',
-                                    email_body,
-                                    flags=re.DOTALL
                                 )
                             
                             email = {
