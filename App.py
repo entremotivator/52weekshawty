@@ -4,13 +4,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict
 import re
 from collections import Counter
-
-try:
-    import gspread
-    from google.oauth2.service_account import Credentials
-    GSPREAD_AVAILABLE = True
-except ImportError:
-    GSPREAD_AVAILABLE = False
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="VIDeMI Email Sequence Builder", page_icon="📧", layout="wide")
 
@@ -642,186 +636,164 @@ with st.sidebar:
     
     st.subheader("🔗 Google Sheets Integration")
     
-    if GSPREAD_AVAILABLE:
-        service_account_file = st.file_uploader(
-            "Upload Service Account JSON",
-            type=['json'],
-            help="Upload your Google Cloud service account JSON file for authentication",
-            key="service_account_uploader"  # Changed from "service_account" to avoid conflict
-        )
+    if st.checkbox("Enable Google Sheets Integration", key="enable_gspread"):
+        try:
+            import gspread
+            from google.oauth2.service_account import Credentials
+            GSPREAD_AVAILABLE = True
+        except ImportError:
+            GSPREAD_AVAILABLE = False
+            st.warning("⚠️ Google Sheets integration requires `gspread` and `google-auth` libraries")
+            st.code("pip install gspread google-auth", language="bash")
         
-        if service_account_file is not None:
-            try:
-                service_account_info = json.load(service_account_file)
-                st.session_state.service_account_info = service_account_info  # Changed variable name
-                st.success("✅ Service account loaded!")
-            except Exception as e:
-                st.error(f"❌ Error loading service account: {str(e)}")
-        
-        # Google Sheets URL input
-        sheets_url = st.text_input(
-            "Google Sheets URL",
-            value="https://docs.google.com/spreadsheets/d/1vzihyp5r1voFX6A7s2JPFAn1mMmSy75PRvLWQ0Y_6-s/edit?gid=2100751315#gid=2100751315",
-            help="Paste your Google Sheets URL here"
-        )
-        
-        # Extract spreadsheet ID and gid
-        if sheets_url:
-            try:
-                # Extract spreadsheet ID
-                spreadsheet_id_match = re.search(r'/d/([a-zA-Z0-9-_]+)', sheets_url)
-                if spreadsheet_id_match:
-                    spreadsheet_id = spreadsheet_id_match.group(1)
-                    st.session_state.spreadsheet_id = spreadsheet_id
-                    
-                    # Extract gid (sheet ID)
-                    gid_match = re.search(r'gid=(\d+)', sheets_url)
-                    if gid_match:
-                        st.session_state.gid = gid_match.group(1)
-                    
-                    st.caption(f"📊 Spreadsheet ID: {spreadsheet_id[:20]}...")
-            except Exception as e:
-                st.error(f"❌ Invalid URL: {str(e)}")
-        
-        # Pull data button
-        if st.button("📥 Pull from Google Sheets", type="primary", use_container_width=True):
-            if 'service_account_info' not in st.session_state:
-                st.error("❌ Please upload service account JSON first!")
-            elif 'spreadsheet_id' not in st.session_state:
-                st.error("❌ Please enter a valid Google Sheets URL!")
-            else:
-                with st.spinner("Fetching data from Google Sheets..."):
-                    try:
-                        # Authenticate with Google Sheets
-                        scopes = [
-                            'https://www.googleapis.com/auth/spreadsheets.readonly',
-                            'https://www.googleapis.com/auth/drive.readonly'
-                        ]
-                        creds = Credentials.from_service_account_info(
-                            st.session_state.service_account_info,
-                            scopes=scopes
-                        )
-                        client = gspread.authorize(creds)
+        if GSPREAD_AVAILABLE:
+            service_account_file = st.file_uploader(
+                "Upload Service Account JSON",
+                type=['json'],
+                help="Upload your Google Cloud service account JSON file for authentication",
+                key="service_account_uploader"
+            )
+            
+            if service_account_file is not None:
+                try:
+                    service_account_info = json.load(service_account_file)
+                    st.session_state.service_account_info = service_account_info
+                    st.success("✅ Service account loaded!")
+                except Exception as e:
+                    st.error(f"❌ Error loading service account: {str(e)}")
+            
+            # Google Sheets URL input
+            sheets_url = st.text_input(
+                "Google Sheets URL",
+                value="https://docs.google.com/spreadsheets/d/1vzihyp5r1voFX6A7s2JPFAn1mMmSy75PRvLWQ0Y_6-s/edit?gid=2100751315#gid=2100751315",
+                help="Paste your Google Sheets URL here"
+            )
+            
+            # Extract spreadsheet ID and gid
+            if sheets_url:
+                try:
+                    # Extract spreadsheet ID
+                    spreadsheet_id_match = re.search(r'/d/([a-zA-Z0-9-_]+)', sheets_url)
+                    if spreadsheet_id_match:
+                        spreadsheet_id = spreadsheet_id_match.group(1)
+                        st.session_state.spreadsheet_id = spreadsheet_id
                         
-                        # Open the spreadsheet
-                        spreadsheet = client.open_by_key(st.session_state.spreadsheet_id)
+                        # Extract gid (sheet ID)
+                        gid_match = re.search(r'gid=(\d+)', sheets_url)
+                        if gid_match:
+                            st.session_state.gid = gid_match.group(1)
                         
-                        # Get the specific worksheet by gid if available
-                        if 'gid' in st.session_state:
-                            worksheet = spreadsheet.get_worksheet_by_id(int(st.session_state.gid))
-                        else:
-                            worksheet = spreadsheet.sheet1
-                        
-                        # Get all records
-                        records = worksheet.get_all_records()
-                        
-                        # Convert to email sequence format
-                        sequence = []
-                        for record in records:
-                            email_number = record.get('Email_Number', 0)
-                            title = record.get('Title', '')
-                            subject_line = record.get('Subject_Line', '')
-                            complete_html = record.get('Complete_HTML_Code', '')
+                        st.caption(f"📊 Spreadsheet ID: {spreadsheet_id[:20]}...")
+                except Exception as e:
+                    st.error(f"❌ Invalid URL: {str(e)}")
+            
+            # Pull data button
+            if st.button("📥 Pull from Google Sheets", type="primary", use_container_width=True):
+                if 'service_account_info' not in st.session_state:
+                    st.error("❌ Please upload service account JSON first!")
+                elif 'spreadsheet_id' not in st.session_state:
+                    st.error("❌ Please enter a valid Google Sheets URL!")
+                else:
+                    with st.spinner("Fetching data from Google Sheets..."):
+                        try:
+                            # Authenticate with Google Sheets
+                            scopes = [
+                                'https://www.googleapis.com/auth/spreadsheets.readonly',
+                                'https://www.googleapis.com/auth/drive.readonly'
+                            ]
+                            creds = Credentials.from_service_account_info(
+                                st.session_state.service_account_info,
+                                scopes=scopes
+                            )
+                            client = gspread.authorize(creds)
                             
-                            # Skip empty rows
-                            if not email_number or not subject_line:
-                                continue
+                            # Open the spreadsheet
+                            spreadsheet = client.open_by_key(st.session_state.spreadsheet_id)
                             
-                            # Calculate delay based on email number
-                            if email_number == 1:
-                                delay = 0
-                            elif email_number <= 5:
-                                delay = email_number - 1
-                            elif email_number <= 10:
-                                delay = (email_number - 1) * 2
-                            elif email_number <= 21:
-                                delay = (email_number - 1) * 3
+                            # Get the specific worksheet by gid if available
+                            if 'gid' in st.session_state:
+                                worksheet = spreadsheet.get_worksheet_by_id(int(st.session_state.gid))
                             else:
-                                delay = (email_number - 1) * 7  # Weekly for 52-email sequences
+                                worksheet = spreadsheet.sheet1
                             
-                            if '<!DOCTYPE html>' in complete_html or '<html' in complete_html.lower():
-                                # It's already a complete HTML document, use as-is
-                                email_body = complete_html
+                            # Get all records
+                            records = worksheet.get_all_records()
+                            
+                            # Convert to email sequence format
+                            sequence = []
+                            for record in records:
+                                email_number = record.get('Email_Number', 0)
+                                title = record.get('Title', '')
+                                subject_line = record.get('Subject_Line', '')
+                                complete_html = record.get('Complete_HTML_Code', '')
                                 
-                                # Update header image if it exists in the HTML
-                                if 'header-image' in email_body:
-                                    email_body = re.sub(
-                                        r'(<div class="header-image">.*?<img src=")[^"]*(")',
-                                        f'\\1{header_img}\\2',
-                                        email_body,
-                                        flags=re.DOTALL
+                                # Skip empty rows
+                                if not email_number or not subject_line:
+                                    continue
+                                
+                                # Calculate delay based on email number
+                                if email_number == 1:
+                                    delay = 0
+                                elif email_number <= 5:
+                                    delay = email_number - 1
+                                elif email_number <= 10:
+                                    delay = (email_number - 1) * 2
+                                elif email_number <= 21:
+                                    delay = (email_number - 1) * 3
+                                else:
+                                    delay = (email_number - 1) * 7  # Weekly for 52-email sequences
+                                
+                                if '<!DOCTYPE html>' in complete_html or '<html' in complete_html.lower():
+                                    # It's already a complete HTML document, use as-is
+                                    email_body = complete_html
+                                    
+                                    # Update header image if it exists in the HTML
+                                    if 'header-image' in email_body:
+                                        email_body = re.sub(
+                                            r'(<div class="header-image">.*?<img src=")[^"]*(")',
+                                            f'\\1{header_img}\\2',
+                                            email_body,
+                                            flags=re.DOTALL
+                                        )
+                                    
+                                    # Update footer image if it exists in the HTML
+                                    if 'footer-image' in email_body:
+                                        email_body = re.sub(
+                                            r'(<div class="footer-image">.*?<img src=")[^"]*(")',
+                                            f'\\1{footer_img}\\2',
+                                            email_body,
+                                            flags=re.DOTALL
+                                        )
+                                else:
+                                    # It's just content, wrap it with template
+                                    email_body = create_email_html_template(
+                                        complete_html,
+                                        header_img,
+                                        footer_img
                                     )
                                 
-                                # Update footer image if it exists in the HTML
-                                if 'footer-image' in email_body:
-                                    email_body = re.sub(
-                                        r'(<div class="footer-image">.*?<img src=")[^"]*(")',
-                                        f'\\1{footer_img}\\2',
-                                        email_body,
-                                        flags=re.DOTALL
-                                    )
-                            else:
-                                # It's just content, wrap it with template
-                                email_body = create_email_html_template(
-                                    complete_html,
-                                    header_img,
-                                    footer_img
-                                )
+                                email = {
+                                    "id": int(email_number),
+                                    "subject": subject_line,
+                                    "email_body": email_body,
+                                    "delay": delay,
+                                    "status": "active"
+                                }
+                                sequence.append(email)
                             
-                            email = {
-                                "id": int(email_number),
-                                "subject": subject_line,
-                                "email_body": email_body,
-                                "delay": delay,
-                                "status": "active"
-                            }
-                            sequence.append(email)
-                        
-                        # Sort by email number
-                        sequence.sort(key=lambda x: x['id'])
-                        
-                        st.session_state.sequence = sequence
-                        st.success(f"✅ Successfully loaded {len(sequence)} emails from Google Sheets!")
-                        st.rerun()
-                        
-                    except Exception as e:
-                        st.error(f"❌ Error fetching data: {str(e)}")
-                        st.exception(e)
+                            # Sort by email number
+                            sequence.sort(key=lambda x: x['id'])
+                            
+                            st.session_state.sequence = sequence
+                            st.success(f"✅ Successfully loaded {len(sequence)} emails from Google Sheets!")
+                            st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"❌ Error fetching data: {str(e)}")
+                            st.exception(e)
         
-        st.divider()
-        
-        # Instructions
-        with st.expander("📖 Setup Instructions"):
-            st.markdown("""
-            **How to connect Google Sheets:**
-            
-            1. **Create a Service Account:**
-               - Go to [Google Cloud Console](https://console.cloud.google.com/)
-               - Create a new project or select existing
-               - Enable Google Sheets API
-               - Create a Service Account
-               - Download the JSON key file
-            
-            2. **Share Your Sheet:**
-               - Open your Google Sheet
-               - Click "Share" button
-               - Add the service account email (from JSON file)
-               - Give "Viewer" permission
-            
-            3. **Required Columns:**
-               - `Email_Number` - Sequential number (1, 2, 3...)
-               - `Title` - Internal reference (optional)
-               - `Subject_Line` - Email subject
-               - `Complete_HTML_Code` - Full HTML content
-            
-            4. **Upload & Connect:**
-               - Upload the service account JSON above
-               - Paste your Google Sheets URL
-               - Click "Pull from Google Sheets"
-            """)
     else:
-        st.warning("⚠️ Google Sheets integration requires `gspread` and `google-auth` libraries")
-        st.code("pip install gspread google-auth", language="bash")
+        st.warning("⚠️ Google Sheets integration is disabled. Enable it in settings.")
     
     st.divider()
     
@@ -1049,20 +1021,31 @@ with tab1:
                     content_match = re.search(r'<td style="padding: 40px 30px;">(.*?)</td>', email.get('email_body', ''), re.DOTALL)
                     preview_html_content = content_match.group(1).strip() if content_match else ""
 
-                
-                st.markdown("**HTML Preview:**")
-                st.code(create_email_html_template(
+                full_preview_html = create_email_html_template(
                     preview_html_content,
                     st.session_state.get('header_img', DEFAULT_HEADER_IMAGE),
                     st.session_state.get('footer_img', DEFAULT_FOOTER_IMAGE)
-                ), language='html', line_numbers=True)
+                )
                 
-                st.markdown("**Rendered Preview:**")
-                st.markdown(create_email_html_template(
-                    preview_html_content,
-                    st.session_state.get('header_img', DEFAULT_HEADER_IMAGE),
-                    st.session_state.get('footer_img', DEFAULT_FOOTER_IMAGE)
-                ), unsafe_allow_html=True)
+                preview_render_tab, preview_code_tab = st.tabs(["📧 Rendered Email", "💻 HTML Code"])
+                
+                with preview_render_tab:
+                    st.markdown("**Live Email Preview:**")
+                    st.caption("This is how your email will appear to recipients")
+                    
+                    components.html(
+                        full_preview_html,
+                        height=800,
+                        scrolling=True
+                    )
+                
+                with preview_code_tab:
+                    st.markdown("**HTML Source Code:**")
+                    st.code(full_preview_html, language='html', line_numbers=True)
+                    
+                    if st.button("📋 Copy HTML to Clipboard", key=f"copy_html_{actual_idx}"):
+                        st.code(full_preview_html, language='html')
+                        st.info("💡 Select and copy the code above")
 
         else:
             st.info("No emails match your search")
@@ -1133,7 +1116,7 @@ with tab2:
         preview_tab1, preview_tab2 = st.tabs(["Rendered", "HTML Code"])
         
         with preview_tab1:
-            st.markdown(preview_html, unsafe_allow_html=True)
+            components.html(preview_html, height=800, scrolling=True)
         
         with preview_tab2:
             st.code(preview_html, language='html', line_numbers=True)
