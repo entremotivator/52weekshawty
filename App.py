@@ -622,21 +622,38 @@ st.markdown('<div class="main-header"><h1 style="margin:0;">📧 VIDeMI Email Se
 with st.sidebar:
     st.header("⚙️ Settings")
     
+    st.subheader("🖼️ Email Images")
+    header_img = st.text_input(
+        "Header Image URL",
+        value=DEFAULT_HEADER_IMAGE,
+        help="URL for the email header image"
+    )
+    footer_img = st.text_input(
+        "Footer Image URL",
+        value=DEFAULT_FOOTER_IMAGE,
+        help="URL for the email footer image"
+    )
+    
+    # Store in session state for use throughout the app
+    st.session_state.header_img = header_img
+    st.session_state.footer_img = footer_img
+    
+    st.divider()
+    
     st.subheader("🔗 Google Sheets Integration")
     
     if GSPREAD_AVAILABLE:
-        # Service account JSON uploader
         service_account_file = st.file_uploader(
             "Upload Service Account JSON",
             type=['json'],
             help="Upload your Google Cloud service account JSON file for authentication",
-            key="service_account"
+            key="service_account_uploader"  # Changed from "service_account" to avoid conflict
         )
         
         if service_account_file is not None:
             try:
                 service_account_info = json.load(service_account_file)
-                st.session_state.service_account = service_account_info
+                st.session_state.service_account_info = service_account_info  # Changed variable name
                 st.success("✅ Service account loaded!")
             except Exception as e:
                 st.error(f"❌ Error loading service account: {str(e)}")
@@ -668,7 +685,7 @@ with st.sidebar:
         
         # Pull data button
         if st.button("📥 Pull from Google Sheets", type="primary", use_container_width=True):
-            if 'service_account' not in st.session_state:
+            if 'service_account_info' not in st.session_state:
                 st.error("❌ Please upload service account JSON first!")
             elif 'spreadsheet_id' not in st.session_state:
                 st.error("❌ Please enter a valid Google Sheets URL!")
@@ -681,7 +698,7 @@ with st.sidebar:
                             'https://www.googleapis.com/auth/drive.readonly'
                         ]
                         creds = Credentials.from_service_account_info(
-                            st.session_state.service_account,
+                            st.session_state.service_account_info,
                             scopes=scopes
                         )
                         client = gspread.authorize(creds)
@@ -1140,7 +1157,7 @@ with tab3:
         with col3:
             total_days = max([e.get('delay', 0) for e in seq]) if seq else 0
             st.markdown('<div class="stat-card">', unsafe_allow_html=True)
-            st.metric("Duration", f"{total_days} days")
+            st.metric("Sequence Duration", f"{total_days} days")
             st.markdown('</div>', unsafe_allow_html=True)
         
         with col4:
