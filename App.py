@@ -716,16 +716,43 @@ with st.sidebar:
                             else:
                                 worksheet = spreadsheet.sheet1
                             
-                            # Get all records
-                            records = worksheet.get_all_records()
+                            # Get all values including headers
+                            all_values = worksheet.get_all_values()
+                            
+                            if not all_values or len(all_values) < 2:
+                                st.error("❌ Sheet is empty or has no data rows")
+                                raise Exception("Sheet is empty")
+                            
+                            # First row is headers
+                            headers = all_values[0]
+                            data_rows = all_values[1:]
+                            
+                            # Find column indices
+                            try:
+                                email_number_idx = headers.index('Email_Number')
+                                title_idx = headers.index('Title')
+                                subject_idx = headers.index('Subject_Line')
+                                html_idx = headers.index('Complete_HTML_Code')
+                            except ValueError as e:
+                                st.error(f"❌ Missing required column: {str(e)}")
+                                st.info("Required columns: Email_Number, Title, Subject_Line, Complete_HTML_Code")
+                                raise
                             
                             # Convert to email sequence format
                             sequence = []
-                            for record in records:
-                                email_number = record.get('Email_Number', 0)
-                                title = record.get('Title', '')
-                                subject_line = record.get('Subject_Line', '')
-                                complete_html = record.get('Complete_HTML_Code', '')
+                            for row in data_rows:
+                                # Skip if row doesn't have enough columns
+                                if len(row) <= max(email_number_idx, title_idx, subject_idx, html_idx):
+                                    continue
+                                
+                                try:
+                                    email_number = int(row[email_number_idx]) if row[email_number_idx] else 0
+                                except (ValueError, IndexError):
+                                    continue
+                                
+                                title = row[title_idx] if len(row) > title_idx else ''
+                                subject_line = row[subject_idx] if len(row) > subject_idx else ''
+                                complete_html = row[html_idx] if len(row) > html_idx else ''
                                 
                                 # Skip empty rows
                                 if not email_number or not subject_line:
@@ -743,23 +770,38 @@ with st.sidebar:
                                 else:
                                     delay = (email_number - 1) * 7  # Weekly for 52-email sequences
                                 
+                                # Check if it's already a complete HTML document
                                 if '<!DOCTYPE html>' in complete_html or '<html' in complete_html.lower():
                                     # It's already a complete HTML document, use as-is
                                     email_body = complete_html
                                     
                                     # Update header image if it exists in the HTML
-                                    if 'header-image' in email_body:
+                                    if 'header-image' in email_body or 'Header' in email_body:
                                         email_body = re.sub(
-                                            r'(<div class="header-image">.*?<img src=")[^"]*(")',
+                                            r'(<img[^>]*src=")[^"]*("[^>]*alt="[^"]*[Hh]eader[^"]*")',
+                                            f'\\1{header_img}\\2',
+                                            email_body,
+                                            flags=re.DOTALL
+                                        )
+                                        # Also try class-based matching
+                                        email_body = re.sub(
+                                            r'(<div class="header-image">.*?<img[^>]*src=")[^"]*(")',
                                             f'\\1{header_img}\\2',
                                             email_body,
                                             flags=re.DOTALL
                                         )
                                     
                                     # Update footer image if it exists in the HTML
-                                    if 'footer-image' in email_body:
+                                    if 'footer-image' in email_body or 'Footer' in email_body:
                                         email_body = re.sub(
-                                            r'(<div class="footer-image">.*?<img src=")[^"]*(")',
+                                            r'(<img[^>]*src=")[^"]*("[^>]*alt="[^"]*[Ff]ooter[^"]*")',
+                                            f'\\1{footer_img}\\2',
+                                            email_body,
+                                            flags=re.DOTALL
+                                        )
+                                        # Also try class-based matching
+                                        email_body = re.sub(
+                                            r'(<div class="footer-image">.*?<img[^>]*src=")[^"]*(")',
                                             f'\\1{footer_img}\\2',
                                             email_body,
                                             flags=re.DOTALL
@@ -786,6 +828,11 @@ with st.sidebar:
                             
                             st.session_state.sequence = sequence
                             st.success(f"✅ Successfully loaded {len(sequence)} emails from Google Sheets!")
+                            
+                            if sequence:
+                                first_email_html_len = len(sequence[0].get('email_body', ''))
+                                st.info(f"📊 First email HTML length: {first_email_html_len:,} characters")
+                            
                             st.rerun()
                             
                         except Exception as e:
@@ -1371,3 +1418,4 @@ st.markdown("""
     </p>
 </div>
 """, unsafe_allow_html=True)
+
