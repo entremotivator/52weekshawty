@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
 import json
+import re
 from datetime import datetime, timedelta
 import gspread
 from google.oauth2.service_account import Credentials
@@ -57,6 +58,24 @@ def log_activity(action, details):
         'action': action,
         'details': details
     })
+
+def replace_header_footer_images(html_content, header_url, footer_url):
+    """
+    Replace header and footer image URLs in HTML content with specified URLs.
+    Looks for images within header-image and footer-image divs.
+    """
+    if not html_content or html_content == 'nan':
+        return html_content
+    
+    # Replace header image - find img src within header-image div
+    header_pattern = r'(<div[^>]*class=["\']header-image["\'][^>]*>.*?<img[^>]*src=["\'])([^"\']+)(["\'][^>]*>.*?</div>)'
+    html_content = re.sub(header_pattern, r'\1' + header_url + r'\3', html_content, flags=re.DOTALL | re.IGNORECASE)
+    
+    # Replace footer image - find img src within footer-image div
+    footer_pattern = r'(<div[^>]*class=["\']footer-image["\'][^>]*>.*?<img[^>]*src=["\'])([^"\']+)(["\'][^>]*>.*?</div>)'
+    html_content = re.sub(footer_pattern, r'\1' + footer_url + r'\3', html_content, flags=re.DOTALL | re.IGNORECASE)
+    
+    return html_content
 
 # Header
 st.markdown('<div class="main-header">📧 VIDeMI Email Newsletter Manager</div>', unsafe_allow_html=True)
@@ -191,6 +210,11 @@ with st.sidebar:
                         
                         # Sort by email number
                         df = df.sort_values('Email_Number')
+                        
+                        if 'Complete_HTML_Code' in df.columns:
+                            df['Complete_HTML_Code'] = df['Complete_HTML_Code'].apply(
+                                lambda html: replace_header_footer_images(html, header_img, footer_img)
+                            )
                         
                         # Store in session state
                         st.session_state.df = df
@@ -331,16 +355,18 @@ else:
             
             with preview_tab1:
                 st.markdown("#### Email Preview (as recipients will see it)")
-                components.html(email_html, height=1400, scrolling=True)
+                rendered_html = replace_header_footer_images(email_html, header_img, footer_img)
+                components.html(rendered_html, height=1400, scrolling=True)
             
             with preview_tab2:
                 st.markdown("#### HTML Source Code")
-                st.code(email_html, language='html')
+                display_html = replace_header_footer_images(email_html, header_img, footer_img)
+                st.code(display_html, language='html')
                 
                 # Download button
                 st.download_button(
                     label="📥 Download HTML",
-                    data=email_html.encode('utf-8'),
+                    data=display_html.encode('utf-8'),
                     file_name=f"email_{selected_email_num}_{email_title.replace(' ', '_')}.html",
                     mime="text/html",
                     use_container_width=True
@@ -702,4 +728,3 @@ else:
                 type="primary",
                 use_container_width=True
             )
-
