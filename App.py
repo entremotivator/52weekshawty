@@ -651,31 +651,110 @@ else:
                 else:
                     export_df = df.head(export_count)
                 
-                # Build JSON structure
                 emails_list = []
                 
                 for idx, row in export_df.iterrows():
                     email_num = int(row['Email_Number'])
+                    title = str(row['Title'])
+                    subject = str(row['Subject_Line'])
                     html_code = str(row['Complete_HTML_Code']).strip()
                     
-                    # Calculate delay (weekly sequence: 0, 7, 14, 21, etc.)
-                    delay_days = (email_num - 1) * 7
+                    # Calculate delay in seconds (weekly sequence: 0, 604800, 1209600, etc.)
+                    # 604800 seconds = 7 days
+                    delay_seconds = (email_num - 1) * 604800
                     
                     # Determine status
-                    status = "active" if (html_code and html_code != 'nan') else "draft"
+                    status = "published" if (html_code and html_code != 'nan') else "draft"
+                    
+                    # Create slug from title
+                    slug = title.lower().replace(' ', '-').replace('!', '').replace('?', '').replace(':', '')
+                    
+                    # Current timestamp
+                    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     
                     email_obj = {
-                        "id": email_num,
-                        "subject": str(row['Subject_Line']),
+                        "id": email_num + 16,  # Start from 17 like the example
+                        "parent_id": "1",
+                        "type": "sequence_mail",
+                        "title": title,
+                        "available_urls": None,
+                        "slug": slug,
+                        "status": status,
+                        "template_id": "0",
+                        "email_subject": subject,
+                        "email_pre_header": "",
                         "email_body": html_code if (html_code and html_code != 'nan') else "",
-                        "delay_days": delay_days,
-                        "status": status
+                        "recipients_count": "0",
+                        "delay": str(delay_seconds),
+                        "utm_status": "0",
+                        "utm_source": None,
+                        "utm_medium": None,
+                        "utm_campaign": None,
+                        "utm_term": None,
+                        "utm_content": None,
+                        "design_template": "raw_html",
+                        "scheduled_at": None,
+                        "settings": {
+                            "action_triggers": [],
+                            "timings": {
+                                "delay_unit": "minutes",
+                                "delay": 10,
+                                "is_anytime": "yes",
+                                "sending_time": ""
+                            },
+                            "template_config": [],
+                            "mailer_settings": {
+                                "from_name": "",
+                                "from_email": "",
+                                "reply_to_name": "",
+                                "reply_to_email": "",
+                                "is_custom": "no"
+                            }
+                        },
+                        "created_by": "1",
+                        "created_at": current_time,
+                        "updated_at": current_time
                     }
                     
                     emails_list.append(email_obj)
                 
-                # Create final JSON structure
+                # Create final JSON structure with sequence wrapper
                 json_data = {
+                    "sequence": {
+                        "id": 1,
+                        "parent_id": None,
+                        "type": "email_sequence",
+                        "title": "Welcome",
+                        "available_urls": None,
+                        "slug": "welcome",
+                        "status": "draft",
+                        "template_id": None,
+                        "email_subject": None,
+                        "email_pre_header": None,
+                        "email_body": "",
+                        "recipients_count": 0,
+                        "delay": "0",
+                        "utm_status": "0",
+                        "utm_source": None,
+                        "utm_medium": None,
+                        "utm_campaign": None,
+                        "utm_term": None,
+                        "utm_content": None,
+                        "design_template": "simple",
+                        "scheduled_at": None,
+                        "settings": {
+                            "mailer_settings": {
+                                "from_name": "",
+                                "from_email": "",
+                                "reply_to_name": "",
+                                "reply_to_email": "",
+                                "is_custom": "no"
+                            }
+                        },
+                        "created_by": "1",
+                        "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        "updated_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    },
                     "emails": emails_list
                 }
                 
