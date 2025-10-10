@@ -118,7 +118,7 @@ with st.sidebar:
     # Google Sheets URL
     sheets_url = st.text_input(
         "Google Sheets URL",
-        value="https://docs.google.com/spreadsheets/d/1vzihyp5r1voFX6A7s2JPFAn1mMmSy75PRvLWQ0Y_6-s/edit?gid=2100751315#gid=2100751315",
+        value="https://docs.google.com/spreadsheets/d/1dK7a-LoibczZm2SIuZuTK7SUz2GZI9IyNECs-qTzyGc/edit?usp=sharing",
         help="Paste your Google Sheets URL here"
     )
     
